@@ -1,9 +1,6 @@
 <?php
 
-/**
- * JWT Token Generator for Centrifugo
- * بر اساس داکومنت: https://centrifugal.dev/docs/server/authentication
- */
+
 
 function base64url_encode($data) {
     return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');

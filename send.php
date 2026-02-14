@@ -1,15 +1,5 @@
 <?php
 
-/**
- * Publish Message to Centrifugo
- * بر اساس داکومنت: https://centrifugal.dev/docs/server/server_api
- * 
- * دو روش:
- * 1. /api/publish endpoint + X-API-Key header (ساده‌تر)
- * 2. /api endpoint + sign (پیچیده‌تر)
- * 
- * ما از روش 1 استفاده می‌کنیم
- */
 
 // ===== Configuration =====
 $CENTRIFUGO_URL = "http://127.0.0.1:8000";
