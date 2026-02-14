@@ -1,365 +1,562 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fa">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>چت Centrifugo</title>
-  <script src="https://unpkg.com/centrifuge@5/dist/centrifuge.js"></script>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      direction: rtl;
-      background: #f5f5f5;
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      overflow: hidden;
-    }
-
-    .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 20px;
-      text-align: center;
-    }
-
-    .header h1 {
-      font-size: 24px;
-      margin-bottom: 10px;
-    }
-
-    #status {
-      display: inline-block;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: bold;
-      background: rgba(255, 255, 255, 0.3);
-      color: white;
-    }
-
-    .status-connected {
-      background: #4caf50 !important;
-    }
-
-    .status-disconnected {
-      background: #f44336 !important;
-    }
-
-    #chat {
-      list-style: none;
-      height: 400px;
-      overflow-y: auto;
-      padding: 20px;
-      background: #fafafa;
-      border-bottom: 1px solid #e0e0e0;
-    }
-
-    #chat li {
-      margin-bottom: 12px;
-      padding: 12px;
-      background: white;
-      border-left: 4px solid #667eea;
-      border-radius: 4px;
-      animation: slideIn 0.3s ease-out;
-      word-wrap: break-word;
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>چت Centrifugo</title>
+    <script src="https://unpkg.com/centrifuge@5/dist/centrifuge.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
-      to {
-        opacity: 1;
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        direction: rtl;
+        background: #f5f5f5;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 20px;
+      }
+
+      .chat-section {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 24px;
+        margin-bottom: 10px;
+      }
+
+      #status {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        transition: all 0.3s;
+      }
+
+      .status-connected {
+        background: #4caf50 !important;
+      }
+
+      .status-disconnected {
+        background: #f44336 !important;
+      }
+
+      #chat {
+        list-style: none;
+        height: 400px;
+        overflow-y: auto;
+        padding: 20px;
+        background: #fafafa;
+        border-bottom: 1px solid #e0e0e0;
+        flex: 1;
+      }
+
+      #chat li {
+        margin-bottom: 12px;
+        padding: 12px;
+        background: white;
+        border-right: 4px solid #667eea;
+        border-radius: 4px;
+        animation: slideIn 0.3s ease-out;
+        word-wrap: break-word;
+        font-size: 14px;
+        line-height: 1.5;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      #chat li.own {
+        border-right-color: #4caf50;
+        background: #f0f9ff;
+        text-align: right;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      #chat::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      #chat::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+
+      #chat::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+      }
+
+      #chat::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+
+      .form-container {
+        padding: 20px;
+        display: flex;
+        gap: 10px;
+      }
+
+      #form {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+      }
+
+      #msgInput {
+        flex: 1;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        font-family: inherit;
+        direction: rtl;
+        text-align: right;
+      }
+
+      #msgInput:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+      }
+
+      button {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+
+      button:active {
         transform: translateY(0);
       }
-    }
 
-    #chat::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    #chat::-webkit-scrollbar-track {
-      background: #f1f1f1;
-    }
-
-    #chat::-webkit-scrollbar-thumb {
-      background: #888;
-      border-radius: 4px;
-    }
-
-    #chat::-webkit-scrollbar-thumb:hover {
-      background: #555;
-    }
-
-    .form-container {
-      padding: 20px;
-      display: flex;
-      gap: 10px;
-    }
-
-    #form {
-      display: flex;
-      gap: 10px;
-      width: 100%;
-    }
-
-    #msgInput {
-      flex: 1;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 14px;
-      font-family: inherit;
-      direction: rtl;
-      text-align: right;
-    }
-
-    #msgInput:focus {
-      outline: none;
-      border-color: #667eea;
-      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
-    }
-
-    button {
-      padding: 12px 24px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 14px;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-
-    button:active {
-      transform: translateY(0);
-    }
-
-    .debug-info {
-      padding: 15px 20px;
-      background: #f0f4ff;
-      border-top: 1px solid #e0e0e0;
-      font-size: 12px;
-      color: #666;
-      font-family: 'Courier New', monospace;
-      max-height: 100px;
-      overflow-y: auto;
-    }
-
-    .error-message {
-      color: #f44336;
-      padding: 10px;
-      background: #ffebee;
-      border-radius: 4px;
-      margin-bottom: 10px;
-    }
-
-    .success-message {
-      color: #4caf50;
-      padding: 10px;
-      background: #e8f5e9;
-      border-radius: 4px;
-      margin-bottom: 10px;
-    }
-  </style>
-</head>
-<body>
-
-<div class="container">
-  <div class="header">
-    <h1>💬 چت Centrifugo</h1>
-    <div id="status" class="status-disconnected">درحال اتصال...</div>
-  </div>
-
-  <ul id="chat"></ul>
-
-  <div class="form-container">
-    <form id="form">
-      <input 
-        type="text" 
-        id="msgInput" 
-        required 
-        placeholder="پیام خود را بنویسید..."
-        autocomplete="off"
-      >
-      <button type="submit">ارسال ➜</button>
-    </form>
-  </div>
-
-  <div class="debug-info" id="debugInfo"></div>
-</div>
-
-<script>
-  // ===== Logger =====
-  const log = {
-    debug: (msg) => console.log('🔵', msg),
-    info: (msg) => console.log('ℹ️', msg),
-    success: (msg) => console.log('✅', msg),
-    error: (msg) => console.error('❌', msg),
-    warn: (msg) => console.warn('⚠️', msg)
-  };
-
-  const debugInfo = document.getElementById('debugInfo');
-  const addDebugLog = (msg) => {
-    debugInfo.innerHTML += `<div>${msg}</div>`;
-    debugInfo.scrollTop = debugInfo.scrollHeight;
-    if (debugInfo.children.length > 20) {
-      debugInfo.removeChild(debugInfo.firstChild);
-    }
-  };
-
-  // ===== Initialize =====
-  let centrifuge = null;
-
-  fetch("token.php")
-    .then(res => {
-      addDebugLog('🔹 Token endpoint سپاس دهنده است');
-      return res.json();
-    })
-    .then(data => {
-      log.success('Token دریافت شد');
-      addDebugLog(`✅ Token: ${data.token.substring(0, 30)}...`);
-      addDebugLog(`ℹ️ User ID: ${data.userId}`);
-
-      const token = data.token;
-      const userId = data.userId;
-
-      // WebSocket connection
-      centrifuge = new Centrifuge("ws://127.0.0.1:8000/connection/websocket");
-      centrifuge.setToken(token);
-
-      // Channel format: namespace:userId
-      // بر اساس داکومنت Centrifugo: allow_user_limited_channels برای این format کار میکنه
-      const channel = `chat:${userId}`;
-      addDebugLog(`🔗 کانال: ${channel}`);
-
-      const sub = centrifuge.newSubscription(channel);
-
-      // ===== Connection Events =====
-      centrifuge.on('connecting', ctx => {
-        log.debug('درحال اتصال به سرور...');
-        setStatus('درحال اتصال...', 'disconnected');
-      });
-
-      centrifuge.on('connected', ctx => {
-        log.success('اتصال برقرار شد!');
-        setStatus('متصل ✓', 'connected');
-        addDebugLog('✅ WebSocket متصل شد');
-      });
-
-      centrifuge.on('disconnected', ctx => {
-        log.error('اتصال قطع شد');
-        setStatus('قطع شده ✗', 'disconnected');
-        addDebugLog(`❌ اتصال قطع: ${ctx.reason}`);
-      });
-
-      centrifuge.on('error', ctx => {
-        log.error('خطای اتصال: ' + ctx.error);
-        addDebugLog(`⚠️ خطا: ${ctx.error}`);
-      });
-
-      // ===== Subscription Events =====
-      sub.on('subscribe', ctx => {
-        log.success('اشتراک فعال شد');
-        addDebugLog(`✅ اشتراک فعال: ${channel}`);
-      });
-
-      sub.on('unsubscribe', ctx => {
-        log.warn('اشتراک لغو شد');
-        addDebugLog(`⚠️ اشتراک لغو: ${ctx.reason}`);
-      });
-
-      sub.on('publication', ctx => {
-        log.success('پیام جدید دریافت شد');
-        addDebugLog(`📩 پیام: ${ctx.data.message.substring(0, 50)}...`);
-
-        const li = document.createElement("li");
-        li.textContent = ctx.data.message;
-        const chatList = document.getElementById('chat');
-        chatList.appendChild(li);
-        chatList.scrollTop = chatList.scrollHeight;
-      });
-
-      sub.on('error', ctx => {
-        log.error('خطای چنل: ' + ctx.error);
-        addDebugLog(`❌ خطای چنل: ${ctx.error}`);
-      });
-
-      // شروع subscription
-      sub.subscribe();
-
-      // اتصال به سرور
-      centrifuge.connect();
-
-    })
-    .catch(err => {
-      log.error('خطا در دریافت token: ' + err);
-      addDebugLog(`❌ Token Error: ${err.message}`);
-    });
-
-  // ===== Form Submission =====
-  document.getElementById('form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const msg = document.getElementById('msgInput').value.trim();
-
-    if (!msg) return;
-
-    log.debug('ارسال پیام: ' + msg);
-    addDebugLog(`📤 ارسال: ${msg.substring(0, 50)}...`);
-
-    fetch("send.php", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ msg })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        log.success('پیام ارسال شد');
-        addDebugLog('✅ پیام ارسال شد');
-      } else {
-        log.error('خطا: ' + data.error);
-        addDebugLog(`❌ خطا: ${data.error}`);
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
-    })
-    .catch(err => {
-      log.error('خطای ارسال: ' + err);
-      addDebugLog(`❌ خطای ارسال: ${err.message}`);
-    });
 
-    document.getElementById('msgInput').value = "";
-  });
+      /* Sidebar Logs */
+      .logs-section {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
 
-  // ===== Helper Functions =====
-  function setStatus(text, className) {
-    const status = document.getElementById('status');
-    status.textContent = text;
-    status.className = 'status-' + className;
-  }
+      .logs-header {
+        background: #f5f5f5;
+        padding: 15px;
+        border-bottom: 1px solid #e0e0e0;
+        font-weight: bold;
+        font-size: 12px;
+        color: #333;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
 
-</script>
+      .logs-header button {
+        padding: 4px 8px;
+        font-size: 11px;
+        background: #667eea;
+      }
 
-</body>
+      #logs {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+        font-family: "Courier New", monospace;
+        font-size: 11px;
+        background: #fafafa;
+      }
+
+      .log-entry {
+        margin-bottom: 8px;
+        padding: 6px;
+        background: white;
+        border-radius: 3px;
+        border-right: 3px solid #999;
+        line-height: 1.4;
+      }
+
+      .log-entry.debug {
+        border-right-color: #2196f3;
+      }
+
+      .log-entry.info {
+        border-right-color: #2196f3;
+      }
+
+      .log-entry.success {
+        border-right-color: #4caf50;
+        color: #2e7d32;
+      }
+
+      .log-entry.error {
+        border-right-color: #f44336;
+        color: #c62828;
+        background: #ffebee;
+      }
+
+      .log-entry.warn {
+        border-right-color: #ff9800;
+        color: #e65100;
+      }
+
+      .log-time {
+        color: #999;
+        font-size: 10px;
+        display: block;
+      }
+
+      .log-message {
+        margin-top: 2px;
+      }
+
+      @media (max-width: 900px) {
+        .container {
+          grid-template-columns: 1fr;
+        }
+
+        .logs-section {
+          max-height: 200px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="chat-section">
+        <div class="header">
+          <h1>💬 چت Centrifugo</h1>
+          <div id="status" class="status-disconnected">درحال اتصال...</div>
+        </div>
+
+        <ul id="chat"></ul>
+
+        <div class="form-container">
+          <form id="form">
+            <input
+              type="text"
+              id="msgInput"
+              required
+              placeholder="پیام خود را بنویسید..."
+              autocomplete="off"
+            />
+            <button type="submit" id="sendBtn">ارسال ➜</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="logs-section">
+        <div class="logs-header">
+          📋 لاگ‌ها
+          <button onclick="clearLogs()">پاک‌کن</button>
+        </div>
+        <div id="logs"></div>
+      </div>
+    </div>
+
+    <script>
+      // ===== Logger =====
+      const Logger = {
+        logs: [],
+
+        log(level, icon, message, data = null) {
+          const timestamp = new Date().toLocaleTimeString("fa-IR");
+          const entry = {
+            timestamp,
+            level,
+            icon,
+            message,
+            data,
+          };
+          this.logs.push(entry);
+          this.render();
+
+          // Console log
+          const dataStr = data ? " | " + JSON.stringify(data) : "";
+          console.log(`[${timestamp}] ${icon} ${message}${dataStr}`);
+        },
+
+        debug(msg, data) {
+          this.log("debug", "🔵", msg, data);
+        },
+        info(msg, data) {
+          this.log("info", "ℹ️", msg, data);
+        },
+        success(msg, data) {
+          this.log("success", "✅", msg, data);
+        },
+        error(msg, data) {
+          this.log("error", "❌", msg, data);
+        },
+        warn(msg, data) {
+          this.log("warn", "⚠️", msg, data);
+        },
+
+        render() {
+          const logsDiv = document.getElementById("logs");
+          logsDiv.innerHTML = this.logs
+            .map(
+              (log, idx) => `
+        <div class="log-entry ${log.level}">
+          <span class="log-time">${log.timestamp}</span>
+          <div class="log-message">
+            ${log.icon} ${log.message}
+            ${log.data ? `<br><small>${JSON.stringify(log.data)}</small>` : ""}
+          </div>
+        </div>
+      `,
+            )
+            .join("");
+          logsDiv.scrollTop = logsDiv.scrollHeight;
+        },
+
+        clear() {
+          this.logs = [];
+          this.render();
+        },
+      };
+
+      function clearLogs() {
+        Logger.clear();
+      }
+
+      // ===== Initialize =====
+      let centrifuge = null;
+      let userId = null;
+
+      Logger.info("🔹 Application starting...");
+
+      fetch("token.php")
+        .then((res) => {
+          Logger.debug("Token endpoint responded", { status: res.status });
+          return res.json();
+        })
+        .then((data) => {
+          if (!data.success) {
+            throw new Error(data.error || "Token generation failed");
+          }
+
+          Logger.success("✅ Token received", {
+            userId: data.userId,
+            tokenLength: data.token.length,
+            expiresIn: data.expiresIn,
+          });
+
+          userId = data.userId;
+          const token = data.token;
+
+          // ===== Centrifugo Connection =====
+          Logger.info("🚀 Initializing Centrifugo client");
+
+          centrifuge = new Centrifuge(
+            "ws://127.0.0.1:8000/connection/websocket",
+          );
+          centrifuge.setToken(token);
+
+          const channel = `chat:${userId}`;
+          Logger.debug("Subscription channel created", { channel });
+
+          const sub = centrifuge.newSubscription(channel);
+
+          // ===== Connection Events =====
+          centrifuge.on("connecting", (ctx) => {
+            Logger.info("🔌 Connecting to server...", ctx);
+            setStatus("درحال اتصال...", "disconnected");
+          });
+
+          centrifuge.on("connected", (ctx) => {
+            Logger.success("🎯 Connected to server!", {
+              clientId: ctx.client,
+              version: ctx.version,
+            });
+            setStatus("متصل ✓", "connected");
+          });
+
+          centrifuge.on("disconnected", (ctx) => {
+            Logger.error("🔌 Disconnected from server", {
+              reason: ctx.reason,
+              reconnect: ctx.reconnect,
+            });
+            setStatus("قطع شده ✗", "disconnected");
+          });
+
+          centrifuge.on("error", (ctx) => {
+            Logger.error("⚠️ Connection error", {
+              error: ctx.error,
+              message: ctx.message,
+            });
+          });
+
+          // ===== Subscription Events =====
+          sub.on("subscribe", (ctx) => {
+            Logger.success("📢 Subscription successful", {
+              channel,
+              resubscribed: ctx.resubscribed,
+              recovered: ctx.recovered,
+            });
+          });
+
+          sub.on("unsubscribe", (ctx) => {
+            Logger.warn("📴 Unsubscribed", {
+              reason: ctx.reason,
+              channel,
+            });
+          });
+
+          sub.on("publication", (ctx) => {
+            Logger.success("📩 Message received", {
+              message: ctx.data.message.substring(0, 50),
+              timestamp: new Date(ctx.data.timestamp).toLocaleTimeString(
+                "fa-IR",
+              ),
+              sender: ctx.data.userId,
+            });
+
+            if (data.success) {
+              Logger.success("✅ Message sent successfully");
+            }
+          });
+
+          sub.on("error", (ctx) => {
+            Logger.error("❌ Subscription error", {
+              error: ctx.error,
+              channel,
+            });
+          });
+
+          Logger.debug("📡 Starting subscription...");
+          sub.subscribe();
+
+          Logger.debug("🔗 Connecting to WebSocket...");
+          centrifuge.connect();
+        })
+        .catch((err) => {
+          Logger.error("❌ Initialization failed", {
+            message: err.message,
+            stack: err.stack,
+          });
+        });
+
+      // ===== Form Submission =====
+      document
+        .getElementById("form")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+          const msg = document.getElementById("msgInput").value.trim();
+          const sendBtn = document.getElementById("sendBtn");
+
+          if (!msg) {
+            Logger.warn("⚠️ Empty message not sent");
+            return;
+          }
+
+          Logger.info("📤 Sending message...", {
+            messageLength: msg.length,
+            preview: msg.substring(0, 50),
+          });
+
+          sendBtn.disabled = true;
+
+          try {
+            const response = await fetch("send.php", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ msg }),
+            });
+
+            const data = await response.json();
+
+            Logger.debug("Server response received", {
+              status: response.status,
+              success: data.success,
+            });
+
+            if (data.success) {
+              Logger.success("✅ Message sent successfully", {
+                channel: data.channel,
+                timestamp: data.timestamp,
+              });
+
+              // Add to chat immediately
+              const li = document.createElement("li");
+              li.textContent = msg;
+              li.classList.add("own");
+              const chatList = document.getElementById("chat");
+              chatList.appendChild(li);
+              chatList.scrollTop = chatList.scrollHeight;
+            } else {
+              Logger.error("❌ Server error", {
+                error: data.error,
+              });
+            }
+          } catch (err) {
+            Logger.error("❌ Request failed", {
+              message: err.message,
+            });
+          }
+
+          document.getElementById("msgInput").value = "";
+          sendBtn.disabled = false;
+        });
+
+      // ===== Helper Functions =====
+      function setStatus(text, className) {
+        const status = document.getElementById("status");
+        status.textContent = text;
+        status.className = "status-" + className;
+      }
+    </script>
+  </body>
 </html>
