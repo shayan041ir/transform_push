@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Realtime Chat with Centrifugo</title>
+    <script src="https://unpkg.com/centrifuge@5.5.3/dist/centrifuge.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+      }
+      #chat {
+        list-style: none;
+        padding: 0;
+        max-height: 300px;
+        overflow-y: scroll;
+      }
+      #chat li {
+        background: #f1f1f1;
+        margin: 5px 0;
+        padding: 8px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>چت ساده (Realtime)</h2>
+
+    <ul id="chat"></ul>
+
+    <form id="chatForm">
+      <input
+        type="text"
+        id="msgInput"
+        placeholder="پیام..."
+        autocomplete="off"
+        required
+      />
+      <button type="submit">ارسال</button>
+    </form>
+
+    <script>
+      const chatList = document.getElementById("chat");
+      const form = document.getElementById("chatForm");
+      const input = document.getElementById("msgInput");
+
+      // اتصال websocket به Centrifugo
+      const centrifuge = new Centrifuge(
+        "ws://127.0.0.1:8000/connection/websocket",
+      );
+
+      const sub = centrifuge.newSubscription("chat");
+      sub.on("publication", function (ctx) {
+        // داده دریافت شده
+        const msg = ctx.data.message;
+        const li = document.createElement("li");
+        li.textContent = msg;
+        chatList.appendChild(li);
+        chatList.scrollTop = chatList.scrollHeight;
+      });
+
+      sub.subscribe();
+      centrifuge.connect();
+
+      // ارسال پیام به send.php
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        const msg = input.value.trim();
+        if (!msg) return;
+
+        fetch("send.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ msg }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            console.log("Sent:", data);
+          })
+          .catch((err) => console.error(err));
+
+        input.value = "";
+      });
+      centrifuge.on("connect", function (ctx) {
+        console.log("Connected!", ctx);
+      });
+
+      centrifuge.on("disconnect", function (ctx) {
+        console.log("Disconnected", ctx);
+      });
+    </script>
+  </body>
+</html>
