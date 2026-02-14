@@ -1,92 +1,365 @@
-<!doctype html>
-<html>
-  <head>
-    <title>Realtime Chat with Centrifugo</title>
-    <script src="https://unpkg.com/centrifuge@5.5.3/dist/centrifuge.js"></script>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 40px;
-      }
-      #chat {
-        list-style: none;
-        padding: 0;
-        max-height: 300px;
-        overflow-y: scroll;
-      }
-      #chat li {
-        background: #f1f1f1;
-        margin: 5px 0;
-        padding: 8px;
-        border-radius: 4px;
-      }
-    </style>
-  </head>
-  <body>
-    <h2>چت ساده (Realtime)</h2>
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>چت Centrifugo</title>
+  <script src="https://unpkg.com/centrifuge@5/dist/centrifuge.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-    <ul id="chat"></ul>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      direction: rtl;
+      background: #f5f5f5;
+      padding: 20px;
+    }
 
-    <form id="chatForm">
-      <input
-        type="text"
-        id="msgInput"
-        placeholder="پیام..."
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    #status {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      background: rgba(255, 255, 255, 0.3);
+      color: white;
+    }
+
+    .status-connected {
+      background: #4caf50 !important;
+    }
+
+    .status-disconnected {
+      background: #f44336 !important;
+    }
+
+    #chat {
+      list-style: none;
+      height: 400px;
+      overflow-y: auto;
+      padding: 20px;
+      background: #fafafa;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    #chat li {
+      margin-bottom: 12px;
+      padding: 12px;
+      background: white;
+      border-left: 4px solid #667eea;
+      border-radius: 4px;
+      animation: slideIn 0.3s ease-out;
+      word-wrap: break-word;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    #chat::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #chat::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    #chat::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+
+    #chat::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
+    .form-container {
+      padding: 20px;
+      display: flex;
+      gap: 10px;
+    }
+
+    #form {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    #msgInput {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+      direction: rtl;
+      text-align: right;
+    }
+
+    #msgInput:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    }
+
+    button {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .debug-info {
+      padding: 15px 20px;
+      background: #f0f4ff;
+      border-top: 1px solid #e0e0e0;
+      font-size: 12px;
+      color: #666;
+      font-family: 'Courier New', monospace;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+
+    .error-message {
+      color: #f44336;
+      padding: 10px;
+      background: #ffebee;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+
+    .success-message {
+      color: #4caf50;
+      padding: 10px;
+      background: #e8f5e9;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>💬 چت Centrifugo</h1>
+    <div id="status" class="status-disconnected">درحال اتصال...</div>
+  </div>
+
+  <ul id="chat"></ul>
+
+  <div class="form-container">
+    <form id="form">
+      <input 
+        type="text" 
+        id="msgInput" 
+        required 
+        placeholder="پیام خود را بنویسید..."
         autocomplete="off"
-        required
-      />
-      <button type="submit">ارسال</button>
+      >
+      <button type="submit">ارسال ➜</button>
     </form>
+  </div>
 
-    <script>
-      const chatList = document.getElementById("chat");
-      const form = document.getElementById("chatForm");
-      const input = document.getElementById("msgInput");
+  <div class="debug-info" id="debugInfo"></div>
+</div>
 
-      // اتصال websocket به Centrifugo
-      const centrifuge = new Centrifuge(
-        "ws://127.0.0.1:8000/connection/websocket",
-      );
+<script>
+  // ===== Logger =====
+  const log = {
+    debug: (msg) => console.log('🔵', msg),
+    info: (msg) => console.log('ℹ️', msg),
+    success: (msg) => console.log('✅', msg),
+    error: (msg) => console.error('❌', msg),
+    warn: (msg) => console.warn('⚠️', msg)
+  };
 
-      const sub = centrifuge.newSubscription("chat");
-      sub.on("publication", function (ctx) {
-        // داده دریافت شده
-        const msg = ctx.data.message;
+  const debugInfo = document.getElementById('debugInfo');
+  const addDebugLog = (msg) => {
+    debugInfo.innerHTML += `<div>${msg}</div>`;
+    debugInfo.scrollTop = debugInfo.scrollHeight;
+    if (debugInfo.children.length > 20) {
+      debugInfo.removeChild(debugInfo.firstChild);
+    }
+  };
+
+  // ===== Initialize =====
+  let centrifuge = null;
+
+  fetch("token.php")
+    .then(res => {
+      addDebugLog('🔹 Token endpoint سپاس دهنده است');
+      return res.json();
+    })
+    .then(data => {
+      log.success('Token دریافت شد');
+      addDebugLog(`✅ Token: ${data.token.substring(0, 30)}...`);
+      addDebugLog(`ℹ️ User ID: ${data.userId}`);
+
+      const token = data.token;
+      const userId = data.userId;
+
+      // WebSocket connection
+      centrifuge = new Centrifuge("ws://127.0.0.1:8000/connection/websocket");
+      centrifuge.setToken(token);
+
+      // Channel format: namespace:userId
+      // بر اساس داکومنت Centrifugo: allow_user_limited_channels برای این format کار میکنه
+      const channel = `chat:${userId}`;
+      addDebugLog(`🔗 کانال: ${channel}`);
+
+      const sub = centrifuge.newSubscription(channel);
+
+      // ===== Connection Events =====
+      centrifuge.on('connecting', ctx => {
+        log.debug('درحال اتصال به سرور...');
+        setStatus('درحال اتصال...', 'disconnected');
+      });
+
+      centrifuge.on('connected', ctx => {
+        log.success('اتصال برقرار شد!');
+        setStatus('متصل ✓', 'connected');
+        addDebugLog('✅ WebSocket متصل شد');
+      });
+
+      centrifuge.on('disconnected', ctx => {
+        log.error('اتصال قطع شد');
+        setStatus('قطع شده ✗', 'disconnected');
+        addDebugLog(`❌ اتصال قطع: ${ctx.reason}`);
+      });
+
+      centrifuge.on('error', ctx => {
+        log.error('خطای اتصال: ' + ctx.error);
+        addDebugLog(`⚠️ خطا: ${ctx.error}`);
+      });
+
+      // ===== Subscription Events =====
+      sub.on('subscribe', ctx => {
+        log.success('اشتراک فعال شد');
+        addDebugLog(`✅ اشتراک فعال: ${channel}`);
+      });
+
+      sub.on('unsubscribe', ctx => {
+        log.warn('اشتراک لغو شد');
+        addDebugLog(`⚠️ اشتراک لغو: ${ctx.reason}`);
+      });
+
+      sub.on('publication', ctx => {
+        log.success('پیام جدید دریافت شد');
+        addDebugLog(`📩 پیام: ${ctx.data.message.substring(0, 50)}...`);
+
         const li = document.createElement("li");
-        li.textContent = msg;
+        li.textContent = ctx.data.message;
+        const chatList = document.getElementById('chat');
         chatList.appendChild(li);
         chatList.scrollTop = chatList.scrollHeight;
       });
 
+      sub.on('error', ctx => {
+        log.error('خطای چنل: ' + ctx.error);
+        addDebugLog(`❌ خطای چنل: ${ctx.error}`);
+      });
+
+      // شروع subscription
       sub.subscribe();
+
+      // اتصال به سرور
       centrifuge.connect();
 
-      // ارسال پیام به send.php
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        const msg = input.value.trim();
-        if (!msg) return;
+    })
+    .catch(err => {
+      log.error('خطا در دریافت token: ' + err);
+      addDebugLog(`❌ Token Error: ${err.message}`);
+    });
 
-        fetch("send.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ msg }),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            console.log("Sent:", data);
-          })
-          .catch((err) => console.error(err));
+  // ===== Form Submission =====
+  document.getElementById('form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const msg = document.getElementById('msgInput').value.trim();
 
-        input.value = "";
-      });
-      centrifuge.on("connect", function (ctx) {
-        console.log("Connected!", ctx);
-      });
+    if (!msg) return;
 
-      centrifuge.on("disconnect", function (ctx) {
-        console.log("Disconnected", ctx);
-      });
-    </script>
-  </body>
+    log.debug('ارسال پیام: ' + msg);
+    addDebugLog(`📤 ارسال: ${msg.substring(0, 50)}...`);
+
+    fetch("send.php", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ msg })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        log.success('پیام ارسال شد');
+        addDebugLog('✅ پیام ارسال شد');
+      } else {
+        log.error('خطا: ' + data.error);
+        addDebugLog(`❌ خطا: ${data.error}`);
+      }
+    })
+    .catch(err => {
+      log.error('خطای ارسال: ' + err);
+      addDebugLog(`❌ خطای ارسال: ${err.message}`);
+    });
+
+    document.getElementById('msgInput').value = "";
+  });
+
+  // ===== Helper Functions =====
+  function setStatus(text, className) {
+    const status = document.getElementById('status');
+    status.textContent = text;
+    status.className = 'status-' + className;
+  }
+
+</script>
+
+</body>
 </html>
